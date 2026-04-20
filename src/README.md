@@ -1,7 +1,3 @@
- مباشرة:
-
----
-
 # Webhook-Driven Task Processing Pipeline
 
 ## Overview

@@ -36,8 +36,13 @@ export const getJobByIdWithAttempts = async (id: string) => {
     const job = await prisma.job.findUnique({
         where: { id },
         include: {
-            _count: {
-                select: { deliveryAttempts: true },
+            deliveryAttempts: {
+                orderBy: { createdAt: 'asc' },
+                include: {
+                    subscriber: {
+                        select: { id: true, url: true },
+                    },
+                },
             },
         },
     });
@@ -51,7 +56,17 @@ export const getJobByIdWithAttempts = async (id: string) => {
         status: job.status,
         payload: job.payload,
         result: job.result,
-        delivery_attempts: job._count.deliveryAttempts,
+        delivery_attempts_count: job.deliveryAttempts.length,
+        deliveryAttempts: job.deliveryAttempts.map((a) => ({
+            id: a.id,
+            attemptNumber: a.attemptNumber,
+            status: a.status,
+            responseStatus: a.responseStatus,
+            responseBody: a.responseBody,
+            errorMessage: a.errorMessage,
+            subscriberUrl: a.subscriber.url,
+            createdAt: a.createdAt,
+        })),
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
     };
@@ -73,7 +88,8 @@ export const getJobsByPipeline = async (pipelineId: string) => {
         status: job.status,
         payload: job.payload,
         result: job.result,
-        delivery_attempts: job._count.deliveryAttempts,
+        delivery_attempts_count: job._count.deliveryAttempts,
         createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
     }));
 };

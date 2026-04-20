@@ -7,19 +7,25 @@ services:
       - "3000:3000"
       - "5555:5555"
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/webhook_db
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      PORT: 3000
+    command: sh -c "npx prisma migrate deploy && node dist/server.js"
 
   worker:
     build: .
-    command: npm run worker
+    command: sh -c "npx prisma migrate deploy && node dist/workers/job.worker.js"
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/webhook_db
       REDIS_HOST: redis
@@ -36,12 +42,22 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7
     restart: always
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
